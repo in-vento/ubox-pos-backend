@@ -1,4 +1,4 @@
-import express, { Application, Request, Response, NextFunction } from 'express';
+import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes';
@@ -31,12 +31,12 @@ app.use('/api/recovery', recoveryRoutes);
 app.use('/api/license', licenseRoutes);
 
 // Health Check
-app.get('/health', (req: Request, res: Response) => {
+app.get('/health', (_req: Request, res: Response) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // 404 Handler
-app.use((req: Request, res: Response) => {
+app.use((_req: Request, res: Response) => {
     res.status(404).json({
         success: false,
         error: { message: 'Route not found' }
@@ -53,12 +53,6 @@ const startServer = async () => {
         
         app.listen(PORT, () => {
             console.log(` Server running on port ${PORT}`);
-            console.log(` Auth: http://localhost:${PORT}/api/auth`);
-            console.log(` Business: http://localhost:${PORT}/api/business`);
-            console.log(` Device: http://localhost:${PORT}/api/device`);
-            console.log(` Sync: http://localhost:${PORT}/api/sync`);
-            console.log(` Recovery: http://localhost:${PORT}/api/recovery`);
-            console.log(` License: http://localhost:${PORT}/api/license`);
         });
     } catch (error) {
         console.error(' Failed to start server:', error);
