@@ -1,0 +1,197 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model - represents system users (Cloud Access)
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("USER") // SUPER_ADMIN, USER
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  businesses UserBusiness[]
+
+  @@map("users")
+}
+
+// Business model - represents each restaurant/business
+model Business {
+  id               String   @id @default(cuid())
+  name             String
+  slug             String   @unique
+  plan             String   @default("FREE") // FREE, BASIC, PREMIUM
+  isActive         Boolean  @default(true)
+  
+  // License Management
+  licenseKey       String?  @unique
+  licenseStatus    String   @default("ACTIVE") // ACTIVE, EXPIRED, SUSPENDED
+  licenseExpiry    DateTime?
+  maxDevices       Int      @default(1)
+  lastLicenseCheck DateTime?
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  users      UserBusiness[]
+  devices    Device[]
+  orders     Order[]
+  payments   Payment[]
+  products   Product[]
+  staffUsers StaffUser[]
+  licenseLogs LicenseLog[]
+
+  @@map("businesses")
+}
+
+// Join table for User-Business many-to-many relationship
+model UserBusiness {
+  id         String   @id @default(cuid())
+  userId     String
+  businessId String
+  role       String   @default("POS") // OWNER, ADMIN, MONITOR, POS
+  createdAt  DateTime @default(now())
+
+  // Relations
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, businessId])
+  @@map("user_businesses")
+}
+
+// Device model - represents POS terminals/devices
+model Device {
+  id           String   @id @default(cuid())
+  fingerprint  String   @unique
+  name         String
+  businessId   String
+  role         String   @default("POS") // POS, KITCHEN, BAR
+  isAuthorized Boolean  @default(false)
+  lastSeen     DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@map("devices")
+}
+
+// StaffUser model - Local POS users (Waiters, Cashiers, etc.)
+model StaffUser {
+  id         String   @id @default(cuid())
+  localId    String   // ID from local SQLite
+  businessId String
+  name       String
+  role       String
+  pin        String?
+  status     String   @default("Active")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, localId])
+  @@map("staff_users")
+}
+
+// Product model - synced for recovery and management
+model Product {
+  id         String   @id @default(cuid())
+  localId    String   // ID from local SQLite
+  businessId String
+  name       String
+  price      Float
+  category   String
+  stock      Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, localId])
+  @@map("products")
+}
+
+// Order model - synced from local POS
+model Order {
+  id           String      @id @default(cuid())
+  localId      String      // The ID from the local SQLite
+  businessId   String
+  customId     String?     
+  waiterName   String?     
+  customer     String      @default("Cliente General")
+  status       String      @default("Pending")
+  totalAmount  Float       @default(0)
+  paidAmount   Float       @default(0)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  
+  // Relations
+  business     Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  items        OrderItem[]
+  payments     Payment[]
+
+  @@unique([businessId, localId])
+  @@map("orders")
+}
+
+model OrderItem {
+  id           String   @id @default(cuid())
+  orderId      String
+  productId    String
+  productName  String
+  quantity     Int
+  price        Float
+  
+  // Relations
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("order_items")
+}
+
+model Payment {
+  id           String   @id @default(cuid())
+  localId      String   // The ID from the local SQLite
+  orderId      String
+  businessId   String
+  amount       Float
+  method       String
+  cashier      String?
+  timestamp    DateTime @default(now())
+  
+  // Relations
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  business     Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, localId])
+  @@map("payments")
+}
+
+model LicenseLog {
+  id         String   @id @default(cuid())
+  businessId String
+  action     String   // ACTIVATE, RENEW, SUSPEND, EXPIRE
+  details    String?
+  timestamp  DateTime @default(now())
+
+  // Relations
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@map("license_logs")
+}
