@@ -30,6 +30,7 @@ model Business {
   name      String
   slug      String   @unique
   isActive  Boolean  @default(true)
+  plan      String?  @default("FREE")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -41,11 +42,13 @@ model Business {
   lastLicenseCheck DateTime?
 
   // Relations
-  users    UserBusiness[]
-  devices  Device[]
-  orders   Order[]
-  payments Payment[]
-  logs     LicenseLog[]
+  users      UserBusiness[]
+  devices    Device[]
+  orders     Order[]
+  payments   Payment[]
+  products   Product[]
+  staffUsers StaffUser[]
+  logs       LicenseLog[]
 
   @@map("businesses")
 }
@@ -81,10 +84,46 @@ model Device {
   @@map("devices")
 }
 
+model Product {
+  id         String   @id @default(cuid())
+  localId    String
+  businessId String
+  name       String
+  price      Float
+  category   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, localId])
+  @@map("products")
+}
+
+model StaffUser {
+  id         String   @id @default(cuid())
+  localId    String
+  businessId String
+  name       String
+  role       String
+  pin        String?
+  status     String   @default("ACTIVE")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, localId])
+  @@map("staff_users")
+}
+
 model Order {
   id          String   @id @default(cuid())
-  localId     String   @unique // ID from the local SQLite
+  localId     String
   businessId  String
+  customId    String?
   customerName String?
   waiterName   String?
   total       Float
@@ -94,24 +133,43 @@ model Order {
 
   // Relations
   business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  items    OrderItem[]
   payments Payment[]
 
+  @@unique([businessId, localId])
   @@map("orders")
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  productId   String?
+  productName String
+  quantity    Int
+  price       Float
+  createdAt   DateTime @default(now())
+
+  // Relations
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("order_items")
 }
 
 model Payment {
   id         String   @id @default(cuid())
-  localId    String   @unique // ID from the local SQLite
-  orderId    String
+  localId    String
   businessId String
+  orderId    String
   amount     Float
   method     String
+  cashier    String?
   createdAt  DateTime @default(now())
 
   // Relations
   order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
+  @@unique([businessId, localId])
   @@map("payments")
 }
 
