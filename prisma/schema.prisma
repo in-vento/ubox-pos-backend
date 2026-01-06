@@ -90,6 +90,7 @@ model Product {
   businessId String
   name       String
   price      Float
+  stock      Float    @default(0)
   category   String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -124,6 +125,7 @@ model Order {
   localId     String
   businessId  String
   customId    String?
+  customer    String?
   customerName String?
   waiterName   String?
   total       Float
@@ -163,6 +165,7 @@ model Payment {
   amount     Float
   method     String
   cashier    String?
+  timestamp  DateTime @default(now())
   createdAt  DateTime @default(now())
 
   // Relations
