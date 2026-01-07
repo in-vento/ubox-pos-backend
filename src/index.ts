@@ -5,6 +5,7 @@ import authRoutes from './routes/auth.routes';
 import businessRoutes from './routes/business.routes';
 import deviceRoutes from './routes/device.routes';
 import syncRoutes from './routes/sync.routes';
+import orderRoutes from './routes/order.routes';
 import recoveryRoutes from './routes/recovery.routes';
 import licenseRoutes from './routes/license.routes';
 import { errorHandler } from './middleware/errorHandler';
