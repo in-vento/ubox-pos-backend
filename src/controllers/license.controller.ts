@@ -27,40 +27,40 @@ export const verifyLicense = async (req: Request, res: Response, next: NextFunct
 
     // 1. Check if business is active
     if (!business.isActive) {
-      return res.json({ 
-        success: false, 
-        status: 'SUSPENDED', 
-        message: 'El negocio ha sido suspendido por el administrador.' 
+      return res.json({
+        success: false,
+        status: 'SUSPENDED',
+        message: 'El negocio ha sido suspendido por el administrador.'
       });
     }
 
     // 2. Check license expiry
     const now = new Date();
     if (business.licenseExpiry && business.licenseExpiry < now) {
-      return res.json({ 
-        success: false, 
-        status: 'EXPIRED', 
-        message: 'Tu licencia ha expirado. Por favor, contacta a soporte.' 
+      return res.json({
+        success: false,
+        status: 'EXPIRED',
+        message: 'Tu licencia ha expirado. Por favor, contacta a soporte.'
       });
     }
 
     // 3. Check device authorization
     const device = business.devices.find(d => d.fingerprint === fingerprint);
     if (!device || !device.isAuthorized) {
-      return res.json({ 
-        success: false, 
-        status: 'UNAUTHORIZED_DEVICE', 
-        message: 'Este dispositivo no est� autorizado para operar.' 
+      return res.json({
+        success: false,
+        status: 'UNAUTHORIZED_DEVICE',
+        message: 'Este dispositivo no est� autorizado para operar.'
       });
     }
 
     // 4. Check device limit
     const authorizedDevices = business.devices.filter(d => d.isAuthorized);
     if (authorizedDevices.length > business.maxDevices && !device.isAuthorized) {
-      return res.json({ 
-        success: false, 
-        status: 'LIMIT_EXCEEDED', 
-        message: 'Has excedido el l�mite de dispositivos autorizados.' 
+      return res.json({
+        success: false,
+        status: 'LIMIT_EXCEEDED',
+        message: 'Has excedido el l�mite de dispositivos autorizados.'
       });
     }
 
@@ -99,9 +99,9 @@ export const verifyLicense = async (req: Request, res: Response, next: NextFunct
 export const updateLicense = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { businessId, plan, expiryDate, maxDevices, status } = req.body;
-    
+
     // Only SUPER_ADMIN should be able to call this (handled by middleware)
-    
+
     const updatedBusiness = await prisma.business.update({
       where: { id: businessId },
       data: {
@@ -125,5 +125,28 @@ export const updateLicense = async (req: Request, res: Response, next: NextFunct
   } catch (error) {
     next(error);
     return;
+  }
+};
+
+export const getLicenseLogs = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const businessId = req.headers['x-business-id'] as string;
+
+    if (!businessId) {
+      throw createError('Business ID is required', 400);
+    }
+
+    const logs = await prisma.licenseLog.findMany({
+      where: { businessId },
+      orderBy: { timestamp: 'desc' },
+      take: 100
+    });
+
+    res.json({
+      success: true,
+      data: logs
+    });
+  } catch (error) {
+    next(error);
   }
 };

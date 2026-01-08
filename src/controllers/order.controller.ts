@@ -5,7 +5,7 @@ import { createError } from '../middleware/errorHandler';
 export const getOrders = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const businessId = req.headers['x-business-id'] as string;
-        
+
         if (!businessId) {
             throw createError('Business ID is required', 400);
         }
@@ -13,6 +13,10 @@ export const getOrders = async (req: Request, res: Response, next: NextFunction)
         const orders = await prisma.order.findMany({
             where: {
                 businessId: businessId
+            },
+            include: {
+                payments: true,
+                items: true
             },
             orderBy: {
                 createdAt: 'desc'
@@ -32,7 +36,7 @@ export const getOrders = async (req: Request, res: Response, next: NextFunction)
 export const getOrderStats = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const businessId = req.headers['x-business-id'] as string;
-        
+
         if (!businessId) {
             throw createError('Business ID is required', 400);
         }
@@ -45,7 +49,7 @@ export const getOrderStats = async (req: Request, res: Response, next: NextFunct
                 where: { businessId }
             }),
             prisma.order.count({
-                where: { 
+                where: {
                     businessId,
                     createdAt: {
                         gte: today

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { verifyLicense, updateLicense } from '../controllers/license.controller';
+import { verifyLicense, updateLicense, getLicenseLogs } from '../controllers/license.controller';
 import { authenticate } from '../middleware/auth';
 
 const router = Router();
@@ -9,5 +9,6 @@ router.get('/verify', verifyLicense);
 
 // Protected management (requires authentication)
 router.post('/update', authenticate, updateLicense);
+router.get('/logs', authenticate, getLicenseLogs);
 
 export default router;
