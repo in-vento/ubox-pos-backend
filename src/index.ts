@@ -29,6 +29,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/business', businessRoutes);
 app.use('/api/device', deviceRoutes);
 app.use('/api/sync', syncRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/products', productRoutes);
 app.use('/api/recovery', recoveryRoutes);
 app.use('/api/license', licenseRoutes);
 
@@ -52,7 +54,7 @@ const startServer = async () => {
     try {
         await prisma.$connect();
         console.log(' Database connected successfully');
-        
+
         app.listen(PORT, () => {
             console.log(` Server running on port ${PORT}`);
         });
