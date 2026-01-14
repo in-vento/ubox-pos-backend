@@ -30,7 +30,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
         // Hash password
         const hashedPassword = await hashPassword(password);
 
-        // Create user
+// Create user
         const user = await prisma.user.create({
             data: {
                 email,
@@ -46,6 +46,31 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
             },
         });
 
+        // Generate unique license key
+        const licenseKey = `UBOX-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
+        
+        // Create business automatically with license
+        const business = await prisma.business.create({
+            data: {
+                name: `${name}'s Business`,
+                slug: `${name.toLowerCase().replace(/\s/g, '-')}-${Date.now()}`,
+                plan: 'FREE',
+                maxDevices: 1,
+                licenseExpiry: new Date(Date.now() + (365 * 24 * 60 * 60 * 1000)), // 1 año
+                licenseKey: licenseKey,
+                licenseStatus: 'ACTIVE'
+            }
+        });
+
+        // Link user with business
+        await prisma.userBusiness.create({
+            data: {
+                userId: user.id,
+                businessId: business.id,
+                role: 'OWNER'
+            }
+        });
+
         // Generate token
         const token = generateToken({
             id: user.id,
@@ -58,6 +83,8 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
             data: {
                 user,
                 token,
+                business,
+                licenseKey: business.licenseKey
             },
         });
     } catch (error) {
