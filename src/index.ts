@@ -9,6 +9,9 @@ import orderRoutes from './routes/order.routes';
 import productRoutes from './routes/product.routes';
 import recoveryRoutes from './routes/recovery.routes';
 import licenseRoutes from './routes/license.routes';
+import logRoutes from './routes/log.routes';
+import sunatDocumentRoutes from './routes/sunat-document.routes';
+import clientRoutes from './routes/client.routes';
 import { errorHandler } from './middleware/errorHandler';
 import prisma from './utils/prisma';
 
@@ -33,6 +36,9 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/recovery', recoveryRoutes);
 app.use('/api/license', licenseRoutes);
+app.use('/api/logs', logRoutes);
+app.use('/api', sunatDocumentRoutes);
+app.use('/api', clientRoutes);
 
 // Health Check
 app.get('/health', (_req: Request, res: Response) => {

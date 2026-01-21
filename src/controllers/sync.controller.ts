@@ -129,3 +129,50 @@ export const syncPayment = async (req: Request, res: Response, next: NextFunctio
     return;
   }
 };
+
+export const syncLog = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const businessId = req.headers['x-business-id'] as string;
+    const { localId, action, data } = req.body;
+
+    if (!businessId || !localId || !action || !data) {
+      throw createError('Missing required sync parameters', 400);
+    }
+
+    if (action === 'CREATE') {
+      const log = await prisma.systemLog.upsert({
+        where: {
+          businessId_localId: {
+            businessId,
+            localId,
+          },
+        },
+        update: {
+          action: data.action,
+          details: data.details,
+          userId: data.userId,
+          userName: data.user?.name || data.userName,
+          userRole: data.user?.role || data.userRole,
+          timestamp: new Date(data.timestamp),
+        },
+        create: {
+          localId,
+          businessId,
+          action: data.action,
+          details: data.details,
+          userId: data.userId,
+          userName: data.user?.name || data.userName,
+          userRole: data.user?.role || data.userRole,
+          timestamp: new Date(data.timestamp),
+        },
+      });
+
+      return res.json({ success: true, data: log });
+    }
+
+    return res.status(400).json({ success: false, message: 'Unsupported sync action' });
+  } catch (error) {
+    next(error);
+    return;
+  }
+};

@@ -49,6 +49,7 @@ model Business {
   products   Product[]
   staffUsers StaffUser[]
   logs       LicenseLog[]
+  systemLogs SystemLog[]
 
   @@map("businesses")
 }
@@ -69,14 +70,14 @@ model UserBusiness {
 }
 
 model Device {
-  id          String   @id @default(cuid())
-  fingerprint String   @unique
-  name        String
-  businessId  String
-  isAuthorized Boolean @default(false)
-  role        String   @default("POS")
-  lastSeen    DateTime @default(now())
-  createdAt   DateTime @default(now())
+  id           String   @id @default(cuid())
+  fingerprint  String   @unique
+  name         String
+  businessId   String
+  isAuthorized Boolean  @default(false)
+  role         String   @default("POS")
+  lastSeen     DateTime @default(now())
+  createdAt    DateTime @default(now())
 
   // Relations
   business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
@@ -121,24 +122,25 @@ model StaffUser {
 }
 
 model Order {
-  id          String   @id @default(cuid())
-  localId     String
-  businessId  String
-  customId    String?
-  customer    String?
+  id           String   @id @default(cuid())
+  localId      String
+  businessId   String
+  customId     String?
+  customer     String?
   customerName String?
   waiterName   String?
-  total       Float    @default(0)
-  totalAmount Float    @default(0)
-  paidAmount  Float    @default(0)
-  status      String   @default("PENDING")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  total        Float    @default(0)
+  totalAmount  Float    @default(0)
+  paidAmount   Float    @default(0)
+  status       String   @default("PENDING")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // Relations
-  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  items    OrderItem[]
-  payments Payment[]
+  business       Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  items          OrderItem[]
+  payments       Payment[]
+  sunatDocuments SunatDocument[]
 
   @@unique([businessId, localId])
   @@map("orders")
@@ -181,7 +183,7 @@ model Payment {
 model LicenseLog {
   id         String   @id @default(cuid())
   businessId String
-  action     String   // ACTIVATE, RENEW, SUSPEND, EXPIRE, UPDATE_LICENSE
+  action     String // ACTIVATE, RENEW, SUSPEND, EXPIRE, UPDATE_LICENSE
   details    String?
   timestamp  DateTime @default(now())
 
@@ -189,4 +191,120 @@ model LicenseLog {
   business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
   @@map("license_logs")
+}
+
+model SystemLog {
+  id         String   @id @default(cuid())
+  localId    String
+  businessId String
+  action     String
+  details    String?
+  userId     String?
+  userName   String?
+  userRole   String?
+  timestamp  DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  // Relations
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, localId])
+  @@map("system_logs")
+}
+
+// ============================================
+// SUNAT Electronic Billing Models
+// ============================================
+
+model Client {
+  id          String          @id @default(cuid())
+  localId     String
+  businessId  String
+  tipoDoc     String // "DNI" | "RUC" | "CE" | "PASAPORTE"
+  numDoc      String
+  razonSocial String // Nombre completo o Razón Social
+  direccion   String?
+  email       String?
+  telefono    String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  documents   SunatDocument[]
+
+  @@unique([businessId, numDoc])
+  @@map("clients")
+}
+
+model SunatDocument {
+  id           String              @id @default(cuid())
+  localId      String
+  businessId   String
+  orderId      String
+  order        Order               @relation(fields: [orderId], references: [id])
+  clientId     String?
+  client       Client?             @relation(fields: [clientId], references: [id])
+  documentType String // "01" Factura, "03" Boleta, "07" Nota Crédito, "08" Nota Débito
+  serie        String // e.g., "F001", "B001"
+  correlativo  Int
+  fullNumber   String // e.g., "F001-00000123"
+  fechaEmision DateTime            @default(now())
+  moneda       String              @default("PEN")
+  subtotal     Float
+  igv          Float
+  total        Float
+  status       String              @default("DRAFT") // DRAFT | ENVIADO | ACEPTADO | RECHAZADO | PENDIENTE
+  provider     String? // "nubefact" | "efact" | "bizlinks" | "digiflow" | "mock"
+  hash         String?
+  pdfUrl       String?
+  xmlUrl       String?
+  cdrUrl       String?
+  errorMessage String?
+  retryCount   Int                 @default(0)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  items        SunatDocumentItem[]
+
+  @@unique([businessId, localId])
+  @@index([orderId])
+  @@index([status])
+  @@map("sunat_documents")
+}
+
+model SunatDocumentItem {
+  id             String        @id @default(cuid())
+  documentId     String
+  document       SunatDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  descripcion    String
+  cantidad       Float
+  valorUnitario  Float // Precio sin IGV
+  precioUnitario Float // Precio con IGV
+  igv            Float
+  total          Float
+
+  @@map("sunat_document_items")
+}
+
+model CompanySunatConfig {
+  id                 String   @id @default(cuid())
+  businessId         String   @unique
+  sunatEnabled       Boolean  @default(false)
+  provider           String   @default("mock") // "mock" | "nubefact" | "efact" | etc.
+  ruc                String?
+  razonSocial        String?
+  nombreComercial    String?
+  direccion          String?
+  ubigeo             String?
+  departamento       String?
+  provincia          String?
+  distrito           String?
+  regimen            String? // "GENERAL" | "MYPE" | "RER"
+  serieFactura       String   @default("F001")
+  serieBoleta        String   @default("B001")
+  correlativoFactura Int      @default(0)
+  correlativoBoleta  Int      @default(0)
+  pseToken           String? // Encrypted
+  pseUrl             String?
+  pseRucUsuario      String? // For Nubefact
+  updatedAt          DateTime @updatedAt
+
+  @@map("company_sunat_configs")
 }
