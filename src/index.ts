@@ -12,6 +12,7 @@ import licenseRoutes from './routes/license.routes';
 import logRoutes from './routes/log.routes';
 import sunatDocumentRoutes from './routes/sunat-document.routes';
 import clientRoutes from './routes/client.routes';
+import staffUserRoutes from './routes/staff-user.routes';
 import { errorHandler } from './middleware/errorHandler';
 import prisma from './utils/prisma';
 
@@ -39,6 +40,7 @@ app.use('/api/license', licenseRoutes);
 app.use('/api/logs', logRoutes);
 app.use('/api', sunatDocumentRoutes);
 app.use('/api', clientRoutes);
+app.use('/api/staff', staffUserRoutes);
 
 // Health Check
 app.get('/health', (_req: Request, res: Response) => {

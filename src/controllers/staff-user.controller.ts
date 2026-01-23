@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import prisma from '../utils/prisma';
 import { createError } from '../middleware/errorHandler';
 
-export const getProducts = async (req: Request, res: Response, next: NextFunction) => {
+export const getStaffUsers = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const businessId = req.headers['x-business-id'] as string;
 
@@ -10,7 +10,7 @@ export const getProducts = async (req: Request, res: Response, next: NextFunctio
             throw createError('Business ID is required', 400);
         }
 
-        const products = await prisma.product.findMany({
+        const staffUsers = await prisma.staffUser.findMany({
             where: {
                 businessId: businessId
             },
@@ -21,14 +21,14 @@ export const getProducts = async (req: Request, res: Response, next: NextFunctio
 
         return res.json({
             success: true,
-            data: products
+            data: staffUsers
         });
     } catch (error) {
         return next(error);
     }
 };
 
-export const syncProduct = async (req: Request, res: Response, next: NextFunction) => {
+export const syncStaffUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const businessId = req.headers['x-business-id'] as string;
         const { localId, action, data } = req.body;
@@ -38,7 +38,7 @@ export const syncProduct = async (req: Request, res: Response, next: NextFunctio
         }
 
         if (action === 'CREATE' || action === 'UPDATE') {
-            const product = await prisma.product.upsert({
+            const staffUser = await prisma.staffUser.upsert({
                 where: {
                     businessId_localId: {
                         businessId,
@@ -47,26 +47,26 @@ export const syncProduct = async (req: Request, res: Response, next: NextFunctio
                 },
                 update: {
                     name: data.name,
-                    price: data.price,
-                    stock: data.stock,
-                    category: data.category,
+                    role: data.role,
+                    pin: data.pin,
+                    status: data.status,
                     updatedAt: new Date(data.updatedAt || new Date()),
                 },
                 create: {
                     localId,
                     businessId,
                     name: data.name,
-                    price: data.price,
-                    stock: data.stock || 0,
-                    category: data.category,
+                    role: data.role,
+                    pin: data.pin,
+                    status: data.status || 'ACTIVE',
                     createdAt: new Date(data.createdAt || new Date()),
                     updatedAt: new Date(data.updatedAt || new Date()),
                 },
             });
 
-            return res.json({ success: true, data: product });
+            return res.json({ success: true, data: staffUser });
         } else if (action === 'DELETE') {
-            await prisma.product.deleteMany({
+            await prisma.staffUser.deleteMany({
                 where: {
                     businessId,
                     localId,
